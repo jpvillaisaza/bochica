@@ -1,9 +1,9 @@
 module Main (main) where
 
 -- bochica
-import Bochica ()
+import qualified Bochica
 
 
 main :: IO ()
 main =
-  pure ()
+  Bochica.main
