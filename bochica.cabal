@@ -15,6 +15,7 @@ library
   exposed-modules:
     Bochica
   build-depends:
+    , bytestring ^>= 0.12.1.0
     , http-client ^>= 0.7.17
     , http-client-tls ^>= 0.3.6.3
     , network-uri ^>= 2.6.4.2
