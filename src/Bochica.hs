@@ -3,8 +3,11 @@ module Bochica where
 -- base
 import Data.Foldable (for_)
 import Data.Maybe (fromMaybe, isJust, mapMaybe)
-import System.Environment (getArgs)
+import Data.Version (showVersion)
 import System.Exit (die)
+
+-- bochica
+import Paths_bochica (version)
 
 -- bytestring
 import Data.ByteString.Lazy (ByteString)
@@ -18,6 +21,9 @@ import Network.HTTP.Client.TLS (newTlsManager)
 -- network-uri
 import Network.URI (URI, parseURI, parseURIReference, uriScheme)
 
+-- optparse-applicative
+import Options.Applicative
+
 -- tagsoup
 import Text.HTML.TagSoup (Tag, fromAttrib, isTagOpenName, parseTags)
 import Text.HTML.TagSoup.Match (getTagContent)
@@ -28,33 +34,56 @@ import qualified Data.ByteString.Lazy.UTF8 as LBSU8 (toString)
 
 main :: IO ()
 main = do
-  args <- getArgs
-  case args of
-    [htmlUrl] -> do
-      eFeedLinks <- fetchAndDiscoverFeedLinks htmlUrl
-      case eFeedLinks of
-        Left err ->
-          die err
-        Right feedLinks ->
-          for_ feedLinks $ \feedLink -> do
-            putStr (fromMaybe "No title" (mTitle feedLink))
-            putStrLn (" (" <> show (feedType feedLink) <> "): ")
-            print (feedUrl feedLink)
-    _ ->
-      die "usage: bochica <html-url>"
+  opt <- execParser optParserInfo
+  eFeedLinks <- fetchAndDiscoverFeedLinks (optUrl opt)
+  case eFeedLinks of
+    Left err ->
+      die err
+    Right feedLinks ->
+      for_ feedLinks $ \feedLink -> do
+        putStr (fromMaybe "No title" (mTitle feedLink))
+        putStrLn (" (" <> show (feedType feedLink) <> "): ")
+        print (feedUrl feedLink)
 
-fetchAndDiscoverFeedLinks :: String -> IO (Either String [FeedLink])
-fetchAndDiscoverFeedLinks htmlUrlStr =
-  case parseURI htmlUrlStr of
-    Just htmlUrl | uriScheme htmlUrl `elem` ["http:", "https:"] -> do
-      request <- requestFromURI htmlUrl
-      manager <- newTlsManager
-      response <- httpLbs request manager
-      pure (Right (discoverFeedLinksInHtml (responseBody response)))
-    Just _ ->
-      pure (Left "Invalid scheme")
-    Nothing ->
-      pure (Left "Invalid URL")
+data Opt = Opt
+  { optUrl :: URI
+  }
+
+optParser :: Parser Opt
+optParser =
+  Opt <$> urlParser
+
+urlParser :: Parser URI
+urlParser =
+  argument (eitherReader urlReader)
+    (metavar "URL" <> help "URL")
+  where
+    urlReader urlStr =
+      case parseURI urlStr of
+        Just url | uriScheme url `elem` ["http:", "https:"] -> do
+          Right url
+        Just _ ->
+          Left "Invalid scheme"
+        Nothing ->
+          Left "Invalid URL"
+
+optParserInfo :: ParserInfo Opt
+optParserInfo =
+  info (optParser <**> helper <**> versioner)
+    (fullDesc
+      <> progDesc ""
+      <> header "bochica"
+      <> footer "")
+  where
+    versioner =
+      simpleVersioner ("bochica " <> showVersion version)
+
+fetchAndDiscoverFeedLinks :: URI -> IO (Either String [FeedLink])
+fetchAndDiscoverFeedLinks htmlUrl = do
+  request <- requestFromURI htmlUrl
+  manager <- newTlsManager
+  response <- httpLbs request manager
+  pure (Right (discoverFeedLinksInHtml (responseBody response)))
 
 discoverFeedLinksInHtml :: ByteString -> [FeedLink]
 discoverFeedLinksInHtml =
