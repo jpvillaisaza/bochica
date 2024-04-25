@@ -1,4 +1,4 @@
-module Bochica where
+module Hades where
 
 -- base
 import Data.Foldable (for_)
@@ -6,11 +6,11 @@ import Data.Maybe (fromMaybe, isJust, mapMaybe)
 import Data.Version (showVersion)
 import System.Exit (die)
 
--- bochica
-import Paths_bochica (version)
-
 -- bytestring
 import Data.ByteString.Lazy (ByteString)
+
+-- hades
+import Paths_hades (version)
 
 -- http-client
 import Network.HTTP.Client (httpLbs, requestFromURI, responseBody)
@@ -72,11 +72,11 @@ optParserInfo =
   info (optParser <**> helper <**> versioner)
     (fullDesc
       <> progDesc ""
-      <> header "bochica"
+      <> header "hades"
       <> footer "")
   where
     versioner =
-      simpleVersioner ("bochica " <> showVersion version)
+      simpleVersioner ("hades " <> showVersion version)
 
 fetchAndDiscoverFeedLinks :: URI -> IO (Either String [FeedLink])
 fetchAndDiscoverFeedLinks htmlUrl = do
