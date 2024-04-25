@@ -1,9 +1,9 @@
 module Main (main) where
 
--- bochica
-import qualified Bochica
+-- hades
+import qualified Hades
 
 
 main :: IO ()
 main =
-  Bochica.main
+  Hades.main
